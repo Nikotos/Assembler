@@ -1,0 +1,1 @@
+This is a programm that takes ONE key-symbol and converts its ASCII CODE to binary, HEX, DEG and EIGHT systems
