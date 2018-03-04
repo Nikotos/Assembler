@@ -1,0 +1,657 @@
+Turbo Assembler	 Version 4.1	    03/05/18 00:51:16	    Page 1
+hack4.asm
+
+
+
+      1	0000			     .model tiny
+      2
+      3				     locals @@
+      4
+      5	0000			     .code
+      6				     org 100h
+      7	      =B800		     VIDEOSEG equ 0b800h
+      8	      =003D		     BORDER1 equ  '='
+      9	      =007C		     BORDER2 equ '|'
+     10	      =0020		     FILL_SYM equ ' '
+     11	      =0EDA		     NUMB equ 3802
+     12
+     13
+     14	0100			     Start:
+     15				     ;!//-------------------------------------------------
+     16				     ;!// Print	in BINARY MODE (and in EIGHT and in HEX)
+     17				     ;!// Print(one_bit_from_number)
+     18				     ;!// @input   dx -	mask
+     19				     ;!//	       cl - binary shift
+     20				     ;!// @destr bx
+     21				     ;!//-----------------------------------------------
+     22	0100  EB 1E 90		     jmp bypass1								     ;// bypassing  +
+     23				     jump
+     24	0103			     Print_bit		     proc
+     25	0103  50						     push ax
+     26	0104  23 C2						     and ax, dx
+     27	0106  D3 E8						     shr ax, cl
+     28
+     29	0108  3D 0009						     cmp ax, 9
+     30	010B  7E 03						     jle passing1
+     31	010D  E8 0013						     call correction					     ; // to+
+     32				     print numbers above 9
+     33
+     34	0110							     passing1:
+     35	0110  05 0030						     add ax, 48							    +
+     36				     ; to convert to '0' or '1'
+     37	0113  26: 89 07						     mov es:[bx], ax					     ;	    +
+     38				     console[i][j] = symbol
+     39	0116  26: C6 47	01 5E					     mov byte ptr es:[bx + 1], 5eh	     ; color =		    +
+     40				     smth_interesting
+     41	011B  83 C3 02						     add bx, 2
+     42	011E  58						     pop ax
+     43	011F  C3						     ret
+     44	0120							     endp
+     45	0120			     bypass1:
+     46
+     47	0120  EB 05 90		     jmp bypass2								     ;// bypassing  +
+     48				     jump
+     49	0123			     correction		     proc
+     50	0123  05 0007						     add ax, 7
+     51	0126  C3						     ret						     ; //   +
+     52				     #define(10,11,12,13,14,15)	(A,B,C,D,E,F)
+     53	0127							     endp
+     54	0127			     bypass2:
+     55
+     56				     ;!//-------------------------------------------------
+     57				     ;!// Print	in 10-MODE
+Turbo Assembler	 Version 4.1	    03/05/18 00:51:16	    Page 2
+hack4.asm
+
+
+
+     58				     ;!//
+     59				     ;!// @input al - ASCII CODE
+     60				     ;!// @destr cx
+     61				     ;!//-----------------------------------------------
+     62	0127  EB 13 90		     jmp bypass3									     ;//    +
+     63				     bypassing jump
+     64	012A			     Print_ten		     proc
+     65	012A  50						     push ax
+     66	012B								     ciclec:
+     67	012B  33 D2								     xor dx, dx
+     68	012D  B9 000A								     mov cx, 10
+     69	0130  F7 F1								     div cx					    +
+     70				     ; ax = ax//10, dx = ax % 10
+     71	0132  E8 000A							     call outputs					    +
+     72				     ; printf(dx)
+     73
+     74	0135  3D 0000							     cmp ax, 0
+     75	0138  75 F1							     jne ciclec
+     76	013A  58						     pop ax
+     77	013B  C3						     ret
+     78	013C							     endp
+     79	013C			     bypass3:
+     80
+     81				     ;!//-------------------------------------------------
+     82				     ;!// print	number from dx
+     83				     ;!//
+     84				     ;!// @input dx - almost ASCII CODE
+     85				     ;!// @destr dx
+     86				     ;!//-----------------------------------------------
+     87	013C  EB 10 90		     jmp bypass4								     ;// bypassing  +
+     88				     jump
+     89	013F			     outputs		     proc
+     90	013F  83 C2 30						     add dx, 48							    +
+     91				     ;// to convert to numbers
+     92	0142  26: 89 17						     mov es:[bx], dx					     ;	    +
+     93				     console[i][j] =  dx
+     94	0145  26: C6 47	01 3E					     mov byte ptr es:[bx + 1], 3eh	     ; color =		    +
+     95				     smth_interesting
+     96	014A  83 C3 FE						     add bx, -2
+     97	014D  C3						     ret
+     98	014E							     endp
+     99	014E			     bypass4:
+    100
+    101				     ;!//-------------------------------------------------
+    102				     ;!// convert string from SI to number
+    103				     ;!//
+    104				     ;!// @input si - string pointer
+    105				     ;!//	     di	- multiplier for converting
+    106				     ;!// @output ax - number
+    107				     ;!// @destr si, cx, di
+    108				     ;!//-----------------------------------------------
+    109	014E  EB 13 90		     jmp bypass5
+    110	0151			     convert		     proc
+    111	0151  8A 0C						     mov cl, [si]					     ; cl = +
+    112				     *si
+    113	0153  46						     inc si							    +
+    114				     ; si++
+Turbo Assembler	 Version 4.1	    03/05/18 00:51:16	    Page 3
+hack4.asm
+
+
+
+    115
+    116	0154  80 F9 0D						     cmp cl, 13							    +
+    117				     ; if (cl == "Enter") break
+    118	0157  74 09						     je	@@break
+    119
+    120	0159  F7 E7						     mul di
+    121	015B  83 C1 D0						     add cx, -48					     ;// to +
+    122				     convert from ASCII	to numbers
+    123	015E  03 C1						     add ax, cx
+    124
+    125	0160  EB EF						     jmp convert						    +
+    126				     ; do while	(cl != 'Enter')
+    127	0162							     @@break:
+    128	0162  C3						     ret
+    129	0163							     endp
+    130	0163			     bypass5:
+    131
+    132
+    133
+    134				     ;!//-------------------------------------------------
+    135				     ;!// choosing variant of converting
+    136				     ;!//
+    137				     ;!// @input si - string pointer
+    138				     ;!// @destr cl, di
+    139				     ;!//-----------------------------------------------
+    140	0163  EB 29 90		     jmp bypass6
+    141	0166			     switch			     proc
+    142
+    143	0166  8A 4C FF							     mov cl, [si - 1]
+    144
+    145	0169  80 F9 64							     cmp cl, 100
+    146	016C  75 07							     jne @@pass1
+    147	016E  BF 000A							     mov di, 10
+    148	0171  E8 FFDD							     call convert
+    149	0174  C3							     ret
+    150	0175								     @@pass1:
+    151
+    152	0175  80 F9 62							     cmp cl, 98
+    153	0178  75 07							     jne @@pass2
+    154	017A  BF 0002							     mov di, 2
+    155	017D  E8 FFD1							     call convert
+    156	0180  C3							     ret
+    157	0181								     @@pass2:
+    158
+    159	0181  80 F9 6F							     cmp cl, 111
+    160	0184  75 07							     jne @@pass3
+    161	0186  BF 0008							     mov di, 8
+    162	0189  E8 FFC5							     call convert
+    163	018C  C3							     ret
+    164	018D								     @@pass3:
+    165
+    166	018D  C3							     ret
+    167	018E								     endp
+    168	018E			     bypass6:
+    169
+    170
+    171				     ;!//-------------------------------------------------
+Turbo Assembler	 Version 4.1	    03/05/18 00:51:16	    Page 4
+hack4.asm
+
+
+
+    172				     ;!// Fill border with color
+    173				     ;!//
+    174				     ;!// @input bx - start position for drawing
+    175				     ;!// @destr ax, cx, bx
+    176				     ;!//-----------------------------------------------
+    177	018E  EB 5A 90		     jmp bypass7
+    178	0191			     Color_border	     proc
+    179
+    180								     ;!//position = right_top -	1_step_down	     ; position	= [x+
+    181				     + wide][y + 1]
+    182	0191  8B 1E 000Ar						     mov bx, start_pos
+    183	0195  A1 0004r							     mov ax, wide
+    184	0198  B9 0002							     mov cx, 2
+    185	019B  F7 E1							     mul cx
+    186	019D  03 D8							     add bx, ax
+    187
+    188	019F  C7 06 000Cr 0000						     mov jump_count, 0					    +
+    189				     ; j = 0
+    190	01A5								     @@Fill:
+    191										     ;!// prepare index	for rows print
+    192	01A5  83 06 000Cr 01							     add jump_count, 1				    +
+    193				     ; j++
+    194	01AA  A1 0004r								     mov ax, wide				    +
+    195				     ; ax = wide
+    196	01AD  B9 FFFE								     mov cx, -2
+    197	01B0  F7 E1								     mul cx
+    198	01B2  03 D8								     add bx, ax					    +
+    199				     ; bx = bx - wide +	80*2
+    200	01B4  81 C3 00A0							     add bx, 80*2
+    201	01B8  83 C3 02								     add bx, 2
+    202
+    203	01BB  8B CB								     mov cx, bx
+    204	01BD  03 0E 0004r							     add cx, wide
+    205	01C1  03 0E 0004r							     add cx, wide				    +
+    206				     ; cx = bx + 2*wide
+    207	01C5  83 C1 FC								     add cx, -4
+    208
+    209	01C8									     Fill_line:
+    210
+    211	01C8  B8 0020									     mov ax, FILL_SYM
+    212
+    213	01CB  26: 89 07									     mov es:[bx], ax			 ;  +
+    214				     console[x + i][y] = 'symbol'
+    215	01CE  26: C6 47	01 4E								     mov byte ptr es:[bx + 1], 4eh   ; color+
+    216				     = 'yellow'	on 'red'
+    217	01D3  83 C3 02									     add bx, 2				    +
+    218				     ; i++
+    219
+    220	01D6  3B CB									     cmp cx, bx
+    221	01D8  75 EE									     jne Fill_line			    +
+    222				     ; do while	(bx < cx)
+    223
+    224	01DA  83 C3 02								     add bx, 2					    +
+    225				     ;// to save borders from destruction after	refreshing
+    226	01DD  A1 0006r								     mov ax, fatness
+    227	01E0  05 FFFE								     add ax, -2
+    228	01E3  3B 06 000Cr							     cmp ax, jump_count
+Turbo Assembler	 Version 4.1	    03/05/18 00:51:16	    Page 5
+hack4.asm
+
+
+
+    229	01E7  75 BC								     jne @@Fill
+    230	01E9  C3							     ret
+    231	01EA								     endp
+    232	01EA			     bypass7:
+    233
+    234
+    235
+    236				     ;!//position = top(ramka)					     //	start_position
+    237	01EA  A1 0002r			     mov ax, y								     ; sdvig = (80*y+
+    238				     + x)*2 [or	bx = ]
+    239	01ED  B9 0050			     mov cx, 80								     ; cx =	    +
+    240				     num_of_pos_in_str
+    241	01F0  F7 E1			     mul cx
+    242	01F2  03 06 0000r		     add ax, x
+    243	01F6  B9 0002			     mov cx, 2
+    244	01F9  F7 E1			     mul cx
+    245	01FB  8B D8			     mov bx, ax								     ; bx = sdvig
+    246
+    247				     ;!//remember start_position
+    248	01FD  89 1E 000Ar		     mov start_pos, bx					     ; start_position =	VIDEOSEG +  +
+    249				     (80*y + x)*2
+    250
+    251
+    252				     ;!//set memory_segment = VIDEOSEG
+    253	0201  B8 B800			     mov ax, VIDEOSEG					     ; memory_seg = VIDEOSEG
+    254	0204  8E C0			 mov es, ax
+    255
+    256
+    257
+    258	0206  E8 FF88		     call Color_border
+    259
+    260
+    261				     ;!//iteration_end = right_top(ramka)
+    262	0209  8B 1E 000Ar		     mov bx, start_pos						     ; bx = start_pos
+    263	020D  A1 0004r			     mov ax, wide						     ; cx = VIDEOSEG +	    +
+    264				     wide*2  //prepare iterator
+    265	0210  B9 0002			     mov cx, 2								     ; int n = wide*2
+    266	0213  F7 E1			     mul cx
+    267	0215  8B CB			     mov cx, bx
+    268	0217  03 C8			     add cx, ax
+    269
+    270
+    271				     ;!//Print(ramka.line) // top or bottom border
+    272	0219  C7 06 000Cr 0000	     mov jump_count, 0
+    273	021F			     Print_line:
+    274	021F  B8 003D				     mov ax, BORDER1
+    275	0222  83 06 000Cr 01			     add jump_count, 1						     ;flag1++
+    276
+    277	0227  26: 89 07				     mov es:[bx], ax			     ; console[x + i][y] = 'symbol'
+    278	022A  26: C6 47	01 4E			     mov byte ptr es:[bx + 1], 4eh	     ; color = 'yellow'	on 'red'
+    279	022F  83 C3 02				     add bx, 2							     ; i++
+    280
+    281	0232  3B D9				     cmp bx, cx
+    282	0234  75 E9				     jne Print_line					     ;	     do	while (bx < +
+    283				     cx)
+    284
+    285
+Turbo Assembler	 Version 4.1	    03/05/18 00:51:16	    Page 6
+hack4.asm
+
+
+
+    286
+    287				     ;!//position = left_bottom(ramka)
+    288	0236  8B 1E 000Ar		     mov bx, start_pos						     ; dop_sdvig =	    +
+    289				     (80*fatness)*2 [or	bx = ]
+    290	023A  A1 0006r			     mov ax, fatness						     ; ax = fatness - 1
+    291	023D  05 FFFF			     add ax, -1
+    292	0240  B9 0050			     mov cx, 80								     ; cx = 80
+    293	0243  F7 E1			     mul cx
+    294	0245  B9 0002			     mov cx, 2
+    295	0248  F7 E1			     mul cx
+    296	024A  03 D8			     add bx, ax								     ; bx +=	    +
+    297				     dop_sdvig
+    298
+    299
+    300				     ;!//iteration_end =  right_bottom(ramka)
+    301	024C  A1 0004r			     mov ax, wide						     ; cx = VIDEOSEG +	    +
+    302				     wide*2 //prepare iterator
+    303	024F  B9 0002			     mov cx, 2								     ; int n = wide*2
+    304	0252  F7 E1			     mul cx
+    305	0254  8B CB			     mov cx, bx
+    306	0256  03 C8			     add cx, ax
+    307
+    308
+    309	0258  A1 0004r			     mov ax, wide
+    310	025B  39 06 000Cr		     cmp jump_count, ax							     ; if (flag1 == +
+    311				     wide){Print1}
+    312	025F  74 BE			     je	Print_line
+    313
+    314
+    315				     ;!//position = left_top(ramka)
+    316	0261  8B 1E 000Ar		     mov bx, start_pos
+    317	0265  81 C3 00A0		     add bx, 80*2						     ; bx = start_pos +	80*2
+    318
+    319
+    320				     ;!//iteration_end = left_bottom(ramka)
+    321	0269  A1 0006r			     mov ax, fatness
+    322	026C  05 FFFE			     add ax, -2
+    323	026F  B9 00A0			     mov cx, 80*2
+    324	0272  F7 E1			     mul cx
+    325	0274  8B C8			     mov cx, ax
+    326	0276  03 CB			     add cx, bx								     ; cx = bx +    +
+    327				     (fatness -	1)*80*2
+    328
+    329
+    330				     ;!//Print(ramka.border) //	left or	right border
+    331	0278  C7 06 000Cr 0000	     mov jump_count, 0
+    332	027E			     Print_border:
+    333	027E  B8 007C				     mov ax, BORDER2
+    334	0281  83 06 000Cr 01			     add jump_count, 1
+    335
+    336	0286  26: 89 07				     mov es:[bx], ax					     ; conslole[i][j] =	    +
+    337				     'BORDER2'
+    338	0289  26: C6 47	01 4E			     mov byte ptr es:[bx + 1], 4eh	     ; color = 'yellow'	on 'red
+    339	028E  81 C3 00A0			     add bx, 80*2
+    340
+    341	0292  3B D9				     cmp bx, cx
+    342	0294  75 E8				     jne Print_border					     ; do while	(bx < cx)
+Turbo Assembler	 Version 4.1	    03/05/18 00:51:16	    Page 7
+hack4.asm
+
+
+
+    343
+    344
+    345				     ;!//posotiom = right_top(ramka)
+    346	0296  8B 1E 000Ar		     mov bx, start_pos
+    347	029A  03 1E 0004r		     add bx, wide
+    348	029E  03 1E 0004r		     add bx, wide
+    349	02A2  83 C3 FE			     add bx, -2
+    350	02A5  81 C3 00A0		     add bx, 80*2						     ; bx = start_pos +	    +
+    351				     wide*2 + 80*2
+    352
+    353
+    354				     ;!//itertion_end =	right_bottom(ramka)
+    355	02A9  A1 0006r			     mov ax, fatness
+    356	02AC  05 FFFE			     add ax, -2
+    357	02AF  B9 00A0			     mov cx, 80*2
+    358	02B2  F7 E1			     mul cx
+    359	02B4  8B C8			     mov cx, ax
+    360	02B6  03 CB			     add cx, bx								     ; cx = bx +    +
+    361				     (fatness -	1)*80*2
+    362
+    363
+    364	02B8  A1 0006r			     mov ax, fatness
+    365	02BB  05 FFFE			     add ax, -2
+    366	02BE  3B 06 000Cr		     cmp ax, jump_count
+    367	02C2  74 BA			     je	Print_border
+    368
+    369
+    370				     ;!//position = middle_top(ramka)
+    371	02C4  8B 1E 000Ar		     mov bx, start_pos						     ; dop_sdvig = (80*	    +
+    372				     (fatness/2)*2 [or bx = ]
+    373	02C8  B8 0002			     mov ax, 2								     ; ax =	    +
+    374				     y_wideness
+    375	02CB  B9 0050			     mov cx, 80								     ; cx =	    +
+    376				     num_of_pos_in_str
+    377	02CE  F7 E1			     mul cx
+    378	02D0  03 D8			     add bx, ax								     ; bx +=	    +
+    379				     dop_sdvig // for phrase
+    380
+    381	02D2  A1 0008r			     mov ax, indent
+    382	02D5  B9 0002			     mov cx, 2
+    383	02D8  F7 E1			     mul cx
+    384	02DA  03 D8			     add bx, ax								     ; dop_sdvig += +
+    385				     indent //отступ
+    386
+    387
+    388	02DC  8B FB			     mov di, bx								     ; start_pos =  +
+    389				     bx	// to remember start position
+    390
+    391
+    392				     ;//Convert(number)	while (number != 'q')
+    393	02DE			     Cicl:
+    394					     ;//Scanf("%s", &dx)
+    395
+    396	02DE  33 C0				     xor ax, ax
+    397	02E0  B4 0A				     mov ah, 0ah
+    398	02E2  BA 000Er				     mov dx, offset str_input			     ; dx = 'stdin'
+    399	02E5  CD 21				     int 21h
+Turbo Assembler	 Version 4.1	    03/05/18 00:51:16	    Page 8
+hack4.asm
+
+
+
+    400
+    401	02E7  8B F2				     mov si, dx
+    402	02E9  83 C6 02				     add si, 2
+    403
+    404	02EC  8A 0C				     mov cl, [si]					     ; if(cl ==	"q") break
+    405	02EE  80 F9 71				     cmp cl, 113
+    406	02F1  74 44				     je	Brexit_jump_helper
+    407
+    408	02F3  83 C6 01				     add si, 1
+    409	02F6  33 C0				     xor ax, ax
+    410	02F8  33 C9				     xor cx, cx
+    411
+    412					     ;//ax = auto_type_def(str_input)
+    413	02FA  57				     push di
+    414	02FB  E8 FE68				     call switch
+    415	02FE  5F				     pop di
+    416
+    417	02FF  8B F0			     mov si, ax
+    418	0301  E8 FE8D			     call Color_border						     ;// to refresh the	    +
+    419				     table!
+    420	0304  8B C6			     mov ax, si
+    421
+    422					     ;!//Print(DEG)
+    423	0306  8B DF				     mov bx, di
+    424	0308  81 C3 00B2			     add bx, 80*2 + 9*2
+    425	030C  E8 FE1B				     call Print_ten
+    426
+    427					     ;!//Print(binary)
+    428	030F  8B DF				     mov bx, di
+    429	0311  81 C3 01E0			     add bx, 80*6
+    430	0315  BA 8000				     mov dx, 1000000000000000b				     ; dx = mask_start
+    431	0318  B1 0F				     mov cl, 15								     ; cl = +
+    432				     shift_start
+    433
+    434	031A					     Print_bits:
+    435	031A  E8 FDE6					     call Print_bit					     ; Print_bit()
+    436
+    437	031D  D1 EA					     shr dx, 1
+    438	031F  80 C1 FF					     add cl, -1
+    439
+    440	0322  80 F9 FF					     cmp cl, -1
+    441	0325  75 F3					     jne Print_bits
+    442	0327  BE 0062				     mov si, 98
+    443	032A  26: 89 37				     mov es:[bx], si						     ;// letter	'b'
+    444	032D  26: C6 47	01 5E			     mov byte ptr es:[bx + 1], 5eh
+    445
+    446	0332  EB 06 90			     jmp bypass8
+    447	0335				     Cicl_jump_helper:							     ;// helping jump
+    448	0335  EB A7			     jmp Cicl
+    449	0337				     Brexit_jump_helper:
+    450	0337  EB 5B 90			     jmp Brexit
+    451	033A				     bypass8:
+    452
+    453
+    454					     ;!//Print(first_one_bit)					     ;// print first 1 bits +
+    455				     from 8
+    456	033A  8B DF				     mov bx, di
+Turbo Assembler	 Version 4.1	    03/05/18 00:51:16	    Page 9
+hack4.asm
+
+
+
+    457	033C  81 C3 032C			     add bx, 80*10 + 6*2
+    458
+    459	0340  BA 8000				     mov dx, 1000000000000000b
+    460	0343  B1 0F				     mov cl, 15
+    461	0345  E8 FDBB				     call Print_bit
+    462
+    463						     ;!//Print(eightary)
+    464	0348  BA 0E00					     mov dx, 111000000000b			     ; dx = mask_start
+    465	034B  B1 09					     mov cl, 9							     ; dl = +
+    466				     shift_start
+    467
+    468	034D						     Print_trebits:
+    469	034D  E8 FDB3						     call Print_bit
+    470
+    471	0350  D1 EA D1 EA D1 EA					     shr dx, 3
+    472	0356  80 C1 FD						     add cl, -3
+    473	0359  80 F9 FD						     cmp cl, -3
+    474	035C  75 EF						     jne Print_trebits
+    475	035E  BE 006F					     mov si, 111
+    476	0361  26: 89 37					     mov es:[bx], si						     ;//    +
+    477				     letter 'o'
+    478	0364  26: C6 47	01 5E				     mov byte ptr es:[bx + 1], 5eh
+    479
+    480
+    481
+    482					     ;!//Print(in_HEX_system)
+    483	0369  8B DF					     mov bx, di							     ; //set+
+    484				     position
+    485	036B  81 C3 046C				     add bx, 80*14 + 6*2			     ; print('\n    ')
+    486
+    487	036F  BA F000					     mov dx, 1111000000000000b			     ; dx = mask_start
+    488	0372  B1 0C					     mov cl, 12							     ; cl = +
+    489				     shift_start
+    490
+    491	0374					     Print_hexs:
+    492	0374  E8 FD8C					     call Print_bit
+    493
+    494	0377  D1 EA D1 EA D1 EA	D1+			     shr dx, 4
+    495	      EA
+    496	037F  80 C1 FC					     add cl, -4
+    497	0382  80 F9 FC					     cmp cl, -4
+    498	0385  75 ED					     jne Print_hexs
+    499	0387  BE 0068				     mov si, 104
+    500	038A  26: 89 37				     mov es:[bx], si						     ;// letter	'h'
+    501	038D  26: C6 47	01 5E			     mov byte ptr es:[bx + 1], 5eh
+    502
+    503
+    504	0392  EB A1			     jmp Cicl_jump_helper
+    505
+    506
+    507				     ;!//stop(programm)
+    508	0394				     Brexit:
+    509	0394  B8 4C00			     mov ax, 4c00h						     ; return(0)
+    510	0397  CD 21			     int 21h
+    511
+    512	0399				     .data
+    513	0000  0019			     x dw 25								     ; lest top	    +
+Turbo Assembler	 Version 4.1	    03/05/18 00:51:16	    Page 10
+hack4.asm
+
+
+
+    514				     corner
+    515	0002  0008			     y dw 8
+    516	0004  0019			     wide dw 25						     ; wideness	of border
+    517	0006  000B			     fatness dw	11						     ; fatness of border
+    518	0008  0004			     indent dw 4
+    519	000A  0000			     start_pos dw 0
+    520	000C  0000			     jump_count	dw 0
+    521	000E  14 ?? 24 24 24 24	24+	     str_input db 20, ?, '$$$$$$$$$$$$$$$$$$$$'
+    522	      24 24 24 24 24 24	24+
+    523	      24 24 24 24 24 24	24+
+    524	      24
+    525				     end Start
+Turbo Assembler	 Version 4.1	    03/05/18 00:51:16	    Page 11
+Symbol Table
+
+
+
+
+Symbol Name			  Type	 Value
+
+??DATE				  Text	 "03/05/18"
+??FILENAME			  Text	 "hack4	  "
+??TIME				  Text	 "00:51:15"
+??VERSION			  Number 040A
+@32BIT				  Text	 0
+@@BREAK				  Near	 DGROUP:0162
+@@FILL				  Near	 DGROUP:01A5
+@@PASS1				  Near	 DGROUP:0175
+@@PASS2				  Near	 DGROUP:0181
+@@PASS3				  Near	 DGROUP:018D
+@CODE				  Text	 DGROUP
+@CODESIZE			  Text	 0
+@CPU				  Text	 0101H
+@CURSEG				  Text	 _DATA
+@DATA				  Text	 DGROUP
+@DATASIZE			  Text	 0
+@FILENAME			  Text	 HACK4
+@INTERFACE			  Text	 000H
+@MODEL				  Text	 1
+@STACK				  Text	 DGROUP
+@WORDSIZE			  Text	 2
+BORDER1				  Number 003D
+BORDER2				  Number 007C
+BREXIT				  Near	 DGROUP:0394
+BREXIT_JUMP_HELPER		  Near	 DGROUP:0337
+BYPASS1				  Near	 DGROUP:0120
+BYPASS2				  Near	 DGROUP:0127
+BYPASS3				  Near	 DGROUP:013C
+BYPASS4				  Near	 DGROUP:014E
+BYPASS5				  Near	 DGROUP:0163
+BYPASS6				  Near	 DGROUP:018E
+BYPASS7				  Near	 DGROUP:01EA
+BYPASS8				  Near	 DGROUP:033A
+CICL				  Near	 DGROUP:02DE
+CICLEC				  Near	 DGROUP:012B
+CICL_JUMP_HELPER		  Near	 DGROUP:0335
+COLOR_BORDER			  Near	 DGROUP:0191
+CONVERT				  Near	 DGROUP:0151
+CORRECTION			  Near	 DGROUP:0123
+FATNESS				  Word	 DGROUP:0006
+FILL_LINE			  Near	 DGROUP:01C8
+FILL_SYM			  Number 0020
+INDENT				  Word	 DGROUP:0008
+JUMP_COUNT			  Word	 DGROUP:000C
+NUMB				  Number 0EDA
+OUTPUTS				  Near	 DGROUP:013F
+PASSING1			  Near	 DGROUP:0110
+PRINT_BIT			  Near	 DGROUP:0103
+PRINT_BITS			  Near	 DGROUP:031A
+PRINT_BORDER			  Near	 DGROUP:027E
+PRINT_HEXS			  Near	 DGROUP:0374
+PRINT_LINE			  Near	 DGROUP:021F
+PRINT_TEN			  Near	 DGROUP:012A
+PRINT_TREBITS			  Near	 DGROUP:034D
+Turbo Assembler	 Version 4.1	    03/05/18 00:51:16	    Page 12
+Symbol Table
+
+
+
+START				  Near	 DGROUP:0100
+START_POS			  Word	 DGROUP:000A
+STR_INPUT			  Byte	 DGROUP:000E
+SWITCH				  Near	 DGROUP:0166
+VIDEOSEG			  Number B800
+WIDE				  Word	 DGROUP:0004
+X				  Word	 DGROUP:0000
+Y				  Word	 DGROUP:0002
+
+Groups & Segments		  Bit Size Align  Combine Class
+
+DGROUP				  Group
+  _DATA				  16  0024 Word	  Public  DATA
+  _TEXT				  16  0399 Word	  Public  CODE
+

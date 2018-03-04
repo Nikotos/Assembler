@@ -1,0 +1,310 @@
+Turbo Assembler	 Version 4.1	    02/19/18 22:31:13	    Page 1
+hack1.asm
+
+
+
+      1	0000			     .model tiny
+      2
+      3
+      4	0000			     .code
+      5				     org 100h
+      6	      =B800		     VIDEOSEG equ 0b800h
+      7	      =003D		     BORDER1 equ  '='
+      8	      =007C		     BORDER2 equ '|'
+      9	      =0020		     FILL_SYM equ ' '
+     10
+     11	0100			     Start:
+     12				     ;!//position = top(ramka)					     //	start_position
+     13	0100  A1 0002r			     mov ax, y								     ; sdvig = (80*y+
+     14				     + x)*2 [or	bx = ]
+     15	0103  B9 0050			     mov cx, 80								     ; cx =	    +
+     16				     num_of_pos_in_str
+     17	0106  F7 E1			     mul cx
+     18	0108  03 06 0000r		     add ax, x
+     19	010C  B9 0002			     mov cx, 2
+     20	010F  F7 E1			     mul cx
+     21	0111  8B D8			     mov bx, ax								     ; bx = sdvig
+     22
+     23
+     24				     ;!//remember start_position
+     25	0113  89 1E 0016r		     mov start_pos, bx					     ; start_position =	VIDEOSEG +  +
+     26				     (80*y + x)*2
+     27
+     28
+     29				     ;!//set memory_segment = VIDEOSEG
+     30	0117  B8 B800			     mov ax, VIDEOSEG					     ; memory_seg = VIDEOSEG
+     31	011A  8E C0			 mov es, ax
+     32
+     33
+     34				     ;!//position = right_top -	1_step_down	     ; position	= [x + wide][y + 1]
+     35	011C  8B 1E 0016r	     mov bx, start_pos
+     36	0120  A1 0004r		     mov ax, wide
+     37	0123  B9 0002		     mov cx, 2
+     38	0126  F7 E1		     mul cx
+     39	0128  03 D8		     add bx, ax
+     40
+     41
+     42				     ;Fill(ramka, color)
+     43	012A  C7 06 0018r 0000	     mov jump_count, 0								     ; j = 0
+     44	0130			     Fill:
+     45						     ;!// prepare index	for rows print
+     46	0130  83 06 0018r 01			     add jump_count, 1						     ; j++
+     47	0135  A1 0004r				     mov ax, wide					     ; ax = wide
+     48	0138  B9 FFFE				     mov cx, -2
+     49	013B  F7 E1				     mul cx
+     50	013D  03 D8				     add bx, ax							     ; bx = bx -    +
+     51				     wide + 80*2
+     52	013F  81 C3 00A0			     add bx, 80*2
+     53
+     54	0143  8B CB				     mov cx, bx
+     55	0145  03 0E 0004r			     add cx, wide
+     56	0149  03 0E 0004r			     add cx, wide					     ; cx = bx + 2*wide
+     57
+Turbo Assembler	 Version 4.1	    02/19/18 22:31:13	    Page 2
+hack1.asm
+
+
+
+     58	014D					     Fill_line:
+     59
+     60	014D  B8 0020					     mov ax, FILL_SYM
+     61	0150  26: 89 07					     mov es:[bx], ax			 ; console[x + i][y] = 'symbol'
+     62
+     63	0153  26: C6 47	01 4E				     mov byte ptr es:[bx + 1], 4eh   ; color = 'yellow'	on 'red'
+     64	0158  83 C3 02					     add bx, 2						     ; i++
+     65
+     66	015B  3B D9					     cmp bx, cx
+     67	015D  75 EE					     jne Fill_line				     ; do while	(bx < cx)
+     68
+     69	015F  A1 0006r				     mov ax, fatness
+     70	0162  05 FFFE				     add ax, -2
+     71	0165  3B 06 0018r			     cmp ax, jump_count
+     72	0169  75 C5				     jne Fill
+     73
+     74
+     75
+     76				     ;!//iteration_end = right_top(ramka)
+     77	016B  8B 1E 0016r		     mov bx, start_pos						     ; bx = start_pos
+     78	016F  A1 0004r			     mov ax, wide						     ; cx = VIDEOSEG +	    +
+     79				     wide*2  //prepare iterator
+     80	0172  B9 0002			     mov cx, 2								     ; int n = wide*2
+     81	0175  F7 E1			     mul cx
+     82	0177  8B CB			     mov cx, bx
+     83	0179  03 C8			     add cx, ax
+     84
+     85
+     86				     ;!//Print(ramka.line) // top or bottom border
+     87	017B  C7 06 0018r 0000	     mov jump_count, 0
+     88	0181			     Print_line:
+     89	0181  B8 003D				     mov ax, BORDER1
+     90	0184  83 06 0018r 01			     add jump_count, 1						     ;flag1++
+     91
+     92	0189  26: 89 07				     mov es:[bx], ax			     ; console[x + i][y] = 'symbol'
+     93	018C  26: C6 47	01 4E			     mov byte ptr es:[bx + 1], 4eh	     ; color = 'yellow'	on 'red'
+     94	0191  83 C3 02				     add bx, 2							     ; i++
+     95
+     96	0194  3B D9				     cmp bx, cx
+     97	0196  75 E9				     jne Print_line					     ;	     do	while (bx < +
+     98				     cx)
+     99
+    100
+    101
+    102				     ;!//position = left_bottom(ramka)
+    103	0198  8B 1E 0016r		     mov bx, start_pos						     ; dop_sdvig =	    +
+    104				     (80*fatness)*2 [or	bx = ]
+    105	019C  A1 0006r			     mov ax, fatness						     ; ax = fatness - 1
+    106	019F  05 FFFF			     add ax, -1
+    107	01A2  B9 0050			     mov cx, 80								     ; cx = 80
+    108	01A5  F7 E1			     mul cx
+    109	01A7  B9 0002			     mov cx, 2
+    110	01AA  F7 E1			     mul cx
+    111	01AC  03 D8			     add bx, ax								     ; bx +=	    +
+    112				     dop_sdvig
+    113
+    114
+Turbo Assembler	 Version 4.1	    02/19/18 22:31:13	    Page 3
+hack1.asm
+
+
+
+    115				     ;!//iteration_end =  right_bottom(ramka)
+    116	01AE  A1 0004r			     mov ax, wide						     ; cx = VIDEOSEG +	    +
+    117				     wide*2 //prepare iterator
+    118	01B1  B9 0002			     mov cx, 2								     ; int n = wide*2
+    119	01B4  F7 E1			     mul cx
+    120	01B6  8B CB			     mov cx, bx
+    121	01B8  03 C8			     add cx, ax
+    122
+    123
+    124	01BA  A1 0004r			     mov ax, wide
+    125	01BD  39 06 0018r		     cmp jump_count, ax							     ; if (flag1 == +
+    126				     wide){Print1}
+    127	01C1  74 BE			     je	Print_line
+    128
+    129
+    130				     ;!//position = left_top(ramka)
+    131	01C3  8B 1E 0016r		     mov bx, start_pos
+    132	01C7  81 C3 00A0		     add bx, 80*2						     ; bx = start_pos +	80*2
+    133
+    134
+    135				     ;!//iteration_end = left_bottom(ramka)
+    136	01CB  A1 0006r			     mov ax, fatness
+    137	01CE  05 FFFE			     add ax, -2
+    138	01D1  B9 00A0			     mov cx, 80*2
+    139	01D4  F7 E1			     mul cx
+    140	01D6  8B C8			     mov cx, ax
+    141	01D8  03 CB			     add cx, bx								     ; cx = bx +    +
+    142				     (fatness -	1)*80*2
+    143
+    144
+    145				     ;!//Print(ramka.border) //	left or	right border
+    146	01DA  C7 06 0018r 0000	     mov jump_count, 0
+    147	01E0			     Print_border:
+    148	01E0  B8 007C				     mov ax, BORDER2
+    149	01E3  83 06 0018r 01			     add jump_count, 1
+    150
+    151	01E8  26: 89 07				     mov es:[bx], ax					     ; conslole[i][j] =	    +
+    152				     'BORDER2'
+    153	01EB  26: C6 47	01 4E			     mov byte ptr es:[bx + 1], 4eh	     ; color = 'yellow'	on 'red
+    154	01F0  81 C3 00A0			     add bx, 80*2
+    155
+    156	01F4  3B D9				     cmp bx, cx
+    157	01F6  75 E8				     jne Print_border					     ; do while	(bx < cx)
+    158
+    159
+    160				     ;!//posotiom = right_top(ramka)
+    161	01F8  8B 1E 0016r		     mov bx, start_pos
+    162	01FC  03 1E 0004r		     add bx, wide
+    163	0200  03 1E 0004r		     add bx, wide
+    164	0204  83 C3 FE			     add bx, -2
+    165	0207  81 C3 00A0		     add bx, 80*2						     ; bx = start_pos +	    +
+    166				     wide*2 + 80*2
+    167
+    168
+    169				     ;!//itertion_end =	right_bottom(ramka)
+    170	020B  A1 0006r			     mov ax, fatness
+    171	020E  05 FFFE			     add ax, -2
+Turbo Assembler	 Version 4.1	    02/19/18 22:31:13	    Page 4
+hack1.asm
+
+
+
+    172	0211  B9 00A0			     mov cx, 80*2
+    173	0214  F7 E1			     mul cx
+    174	0216  8B C8			     mov cx, ax
+    175	0218  03 CB			     add cx, bx								     ; cx = bx +    +
+    176				     (fatness -	1)*80*2
+    177
+    178
+    179	021A  A1 0006r			     mov ax, fatness
+    180	021D  05 FFFE			     add ax, -2
+    181	0220  3B 06 0018r		     cmp ax, jump_count
+    182	0224  74 BA			     je	Print_border
+    183
+    184
+    185				     ;!//position = middle(ramka)
+    186	0226  8B 1E 0016r		     mov bx, start_pos						     ; dop_sdvig = (80*	    +
+    187				     (fatness/2)*2 [or bx = ]
+    188	022A  A1 0006r			     mov ax, fatness						     ; ax = y_wideness
+    189	022D  B9 0050			     mov cx, 80								     ; cx =	    +
+    190				     num_of_pos_in_str
+    191	0230  F7 E1			     mul cx
+    192	0232  03 D8			     add bx, ax								     ; bx +=	    +
+    193				     dop_sdvig // for phrase
+    194
+    195	0234  A1 0014r			     mov ax, indent
+    196	0237  B9 0002			     mov cx, 2
+    197	023A  F7 E1			     mul cx
+    198	023C  03 D8			     add bx, ax								     ; dop_sdvig += +
+    199				     indent //отступ
+    200
+    201
+    202	023E  BE 0008r			     mov si, offset phrase				     ; si = &phrase
+    203
+    204
+    205				     ;!//Print(ramka.phrase)
+    206	0241			     Print_phrase:
+    207	0241  8A 04				     mov al, [si]					     ; al = *si
+    208	0243  46				     inc si							     ; si++
+    209
+    210	0244  26: 88 07				     mov es:[bx], al			     ; console[x + i][y] = 'symbol'
+    211	0247  26: C6 47	01 4E			     mov byte ptr es:[bx + 1], 4eh	     ; color = 'yellow on red'
+    212	024C  83 C3 02				     add bx, 2							     ; i++
+    213
+    214	024F  3C 24				     cmp al, '$'
+    215	0251  75 EE				     jne Print_phrase					     ; do while	(i < wide)
+    216
+    217
+    218				     ;!//stop(programm)
+    219	0253  32 E4			     xor ah, ah
+    220	0255  CD 16			     int 16h
+    221
+    222	0257  B8 4C00			     mov ax, 4c00h						     ; return(0)
+    223	025A  CD 21			     int 21h
+    224
+    225	025C				     .data
+    226	0000  001E			     x dw 30								     ; lest top	    +
+    227				     corner
+    228	0002  0008			     y dw 8
+Turbo Assembler	 Version 4.1	    02/19/18 22:31:13	    Page 5
+hack1.asm
+
+
+
+    229	0004  0014			     wide dw 20						     ; wideness	of border
+    230	0006  000A			     fatness dw	10						     ; fatness of border
+    231	0008  68 65 6C 6C 6F 20	77+	     phrase db 'hello world$'
+    232	      6F 72 6C 64 24
+    233	0014  0003			     indent dw 3
+    234	0016  0000			     start_pos dw 0
+    235	0018  0000			     jump_count	dw 0
+    236				     end Start
+Turbo Assembler	 Version 4.1	    02/19/18 22:31:13	    Page 6
+Symbol Table
+
+
+
+
+Symbol Name			  Type	 Value
+
+??DATE				  Text	 "02/19/18"
+??FILENAME			  Text	 "hack1	  "
+??TIME				  Text	 "22:31:13"
+??VERSION			  Number 040A
+@32BIT				  Text	 0
+@CODE				  Text	 DGROUP
+@CODESIZE			  Text	 0
+@CPU				  Text	 0101H
+@CURSEG				  Text	 _DATA
+@DATA				  Text	 DGROUP
+@DATASIZE			  Text	 0
+@FILENAME			  Text	 HACK1
+@INTERFACE			  Text	 000H
+@MODEL				  Text	 1
+@STACK				  Text	 DGROUP
+@WORDSIZE			  Text	 2
+BORDER1				  Number 003D
+BORDER2				  Number 007C
+FATNESS				  Word	 DGROUP:0006
+FILL				  Near	 DGROUP:0130
+FILL_LINE			  Near	 DGROUP:014D
+FILL_SYM			  Number 0020
+INDENT				  Word	 DGROUP:0014
+JUMP_COUNT			  Word	 DGROUP:0018
+PHRASE				  Byte	 DGROUP:0008
+PRINT_BORDER			  Near	 DGROUP:01E0
+PRINT_LINE			  Near	 DGROUP:0181
+PRINT_PHRASE			  Near	 DGROUP:0241
+START				  Near	 DGROUP:0100
+START_POS			  Word	 DGROUP:0016
+VIDEOSEG			  Number B800
+WIDE				  Word	 DGROUP:0004
+X				  Word	 DGROUP:0000
+Y				  Word	 DGROUP:0002
+
+Groups & Segments		  Bit Size Align  Combine Class
+
+DGROUP				  Group
+  _DATA				  16  001A Word	  Public  DATA
+  _TEXT				  16  025C Word	  Public  CODE
+
