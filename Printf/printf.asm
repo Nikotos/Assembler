@@ -3,10 +3,7 @@ SECTION .TEXT
 	GLOBAL _start
 
 SECTION .const
-	NUMBER equ 0xABC
-
-
-
+NUMBER equ 0xABC
 
 _start:
 	jmp main
@@ -14,22 +11,52 @@ _start:
 	;!// int Main() {..............
 	main:
 
-
-		mov rax, rsp
+		;-----------------------
+		mov rax, rsp			; linking to my stack
 		push rax
-
+		;-----------------------
 		mov esp, stack				;// local stack
 		add esp, 1024
+
+
+		mov ax, 3802
+		push ax
+			mov r10d, input1
+			mov r11d, input1_len
+			call Printf
+		pop ax
+
+		mov ax, 100
+		push ax
 
 		mov ax, 3802
 		push ax
 
+		mov rax, s1						;// way to transfer string
+		push rax
+		mov ax, s1_len				;// strlen
+		push ax
+
+		mov ax, 'I'
+		push ax
+
+
+		mov r10d, input2
+		mov r11d, input2_len
 		call Printf
 
-		pop r13w
+		pop ax
 
+		pop ax
 		pop rax
+
+		pop ax
+
+		pop ax
+		;-------------------
+		pop rax						;unlinking my stack
 		mov rsp, rax
+		;------------------
 
 		; return 0
 		mov eax, 1            ; 'exit' system call
@@ -39,15 +66,14 @@ _start:
 
 	jmp bypassing_jump		;// bypssing jump to pass functions
 
-		;!----------------------------------------------------------------
+		;!-------------------------------------------------------------------------------
 		;! C printf() function
 		;! @note - supports %u %x %o %b
 		;!
-		;! @input: stack frame input
-		;! @destr eax, ebx, ecx, edx    - syscall!!!
-		; 				bp, r8d - dectucts here
-		;!				r9d, r13d, r15d	- output operations
-		;!----------------------------------------------------------------
+		;! @input: args in stack frame input
+		;!				 r10d - input string, r11d - len of string
+		;! @destr	may destroy almost all (except rsp, rbp) SYSCALL, DONT BELIEVE ANYONE!!!
+		;!---------------------------------------------------------------------------------
 		Printf:
 			push rbp
 			mov ebp, esp
@@ -57,23 +83,31 @@ _start:
 			parsing:
 				xor rax, rax
 
-				mov al, [input + r9d]
+
+				mov al, [r10d + r9d]
+
 				cmp al, '%' 						; (if getchar() == '%') {call handler}
 				jne pars_pass1
 					add r9d, 1
 					push r9
+					push r10
+					push r11
 					push ax
 
-					call print_handler
-					add ebp, 2
+					call print_handler		;// we work with stack  (ebp) in handler
 
 					pop ax
+					pop r11
+					pop r10
 					pop r9
 				pars_pass1:
+
 
 				cmp al, '%' 						; (if getchar() == '%') {call handler}
 				je pars_pass2
 					push r9								;// Actually, syscall destroys r9,
+					push r10
+					push r11
 					mov [output_sym], al	;// I've spent 2 hours to understand it
 
 					mov eax, 4						;// too lazy to coolect symbils to string
@@ -82,60 +116,138 @@ _start:
 					mov edx, 1
 					int 80h
 
+					pop r11
+					pop r10
 					pop r9
 					pars_pass2:
 
 				add r9d, 1
-				cmp r9d,  input_len
+				cmp r9d, r11d
 				jne parsing
 
 			call Print_space
 			pop rbp
 		ret
 
-		;!----------------------------------------------------------------
+		;!---------------------------------------------------------------------------------
 		;! output printf() handler
-		;! switches between %u %x %o %b
+		;! switches between %u %x %o %b %c %s
 		;!
-		;! @input: stack frame input, r9d - posision in input string
-		;! @destr eax, ebx, ecx, edx, r13d
-		;!---------------------------------------------------------------
+		;! @input: args - stack frame input,
+		;!								r9d - posision in input string
+		;!								r10d - input file pointer
+		;! @destr may destroy almost all (except rsp, rbp) SYSCALL, DONT BELIEVE ANYONE!!!
+		;!----------------------------------------------------------------------------------
 		print_handler:
 			xor r13, r13
-			mov r13w, [ebp]
+			mov al, [r10d + r9d]				; al = qualifier, switch(al)
+			mov cl, 0
 
-			mov al, [input + r9d]
-			cmp al, 'u'
+			cmp al, 'u'									;case 'u': // Unsigned integer
 			jne hand_pass1
+				push ax										;// push to save
+				mov r13w, [ebp]							; r13w = arg
 				call Print_Dec
+				add ebp, 2
+				pop ax
+				mov cl, '1'								; // to print % without qualifiers
 			hand_pass1:
 
-			mov al, [input + r9d]
-			cmp al, 'b'
+			cmp al, 'b'									;case 'b': // Binary
 			jne hand_pass2
+				push ax
+				mov r13w, [ebp]							; r13w = arg
 				call Print_Binary
+				add ebp, 2
+				pop ax
+				mov cl, '1'								; // to print % without qualifiers
 			hand_pass2:
 
-			mov al, [input + r9d]
-			cmp al, 'o'
+			cmp al, 'o'									;case 'o': // Octal
 			jne hand_pass3
+				push ax
+				mov r13w, [ebp]							; r13w = arg
 				call Print_Octal
+				add ebp, 2
+				pop ax
+				mov cl, '1'								; // to print % without qualifiers
 			hand_pass3:
 
-			mov al, [input + r9d]
-			cmp al, 'x'
+			cmp al, 'x'									;case 'x': // Hex
 			jne hand_pass4
+				push ax
+				mov r13w, [ebp]							; r13w = arg
 				call Print_Hex
+				add ebp, 2
+
+				pop ax
+				mov cl, '1'								; // to print % without qualifiers
 			hand_pass4:
+
+			cmp al, 'c'									;case 'c': // Char
+			jne hand_pass5
+				push ax
+				mov r13w, [ebp]						; r13w = arg
+				mov ax, r13w
+				mov [output_sym], al
+
+				mov r8d, output_sym
+				mov edx, 1
+				call print_to_console
+
+				add ebp, 2
+				pop ax
+				mov cl, '1'								; // to print % without qualifiers
+			hand_pass5:
+
+			cmp al, 's'							;case 's': // String
+			jne hand_pass6
+				push ax
+				xor rdx, rdx							;// to edx been nulled
+				mov dx, [ebp]							; dx = strlen!! highest two bytes in stack!
+				mov r8, [ebp + 2]
+				call print_to_console
+
+				add ebp, 10
+				pop ax
+				mov cl, '1'								; // to print % without qualifiers
+			hand_pass6:
+
+			cmp al, '%'							;case 's': // String
+			jne hand_pass7
+				push ax
+				xor rdx, rdx							;// to edx been nulled
+				mov edx, 1							; dx = strlen!! highest two bytes in stack!
+				mov byte [output_sym], '%'
+				mov r8, output_sym
+				mov edx, 1
+				call print_to_console
+
+				pop ax
+				mov cl, '1'								; // to print % without qualifiers
+			hand_pass7:
+
+
+
+			cmp cl, '1'
+			je hand_pass8
+				mov r8d, handler_warning
+				mov edx, handler_warning_len
+				call print_to_console
+
+				mov eax, 1            ; 'exit' system call
+				mov ebx, 0            ; exit with error code 0
+				int 80h
+			hand_pass8:
 
 		ret
 
-		;!----------------------------------------------------------------
+		;!--------------------------------------------------------------------------------
 		;! Print in BINARY mode, preparing and calling func.
 		;!
 		;! @input r13d - Number
-		;! @destr eax, ebx, ecx, edx, r8d, r14d
-		;!---------------------------------------------------------------
+		;! @destr may destroy almost all (except rsp, rbp) SYSCALL, DONT BELIEVE ANYONE!!!
+		;!--------------------------------------------------------------------------------
 		Print_Binary:
 			mov ebx, 10000000000000000b		; ebx = start_mask
 			mov ecx, 16										; ecx = start_shift
@@ -149,12 +261,12 @@ _start:
 			call print_to_console
 		ret
 
-		;!----------------------------------------------------------------
+		;!-----------------------------------------------------------------------------------
 		;! Print in HEX mode, preparing and calling func.
 		;!
 		;! @input r13d - Number
-		;! @destr eax, ebx, ecx, edx, r8d, r14d
-		;!----------------------------------------------------------------
+		;! @destr may destroy almost all (except rsp, rbp) SYSCALL, DONT BELIEVE ANYONE!!!
+		;!----------------------------------------------------------------------------------
 		Print_Hex:
 			mov ebx, 11110000000000000000b		; ebx = start_mask
 			mov ecx, 16												; ecx = start_shift
@@ -168,12 +280,12 @@ _start:
 			call print_to_console
 		ret
 
-		;!----------------------------------------------------------------
+		;!-----------------------------------------------------------------------------
 		;! Print in Octal mode, preparing and calling func.
 		;!
 		;! @input r13d - Number
-		;! @destr eax, ebx, ecx, edx, r8d, r14d, r13d
-		;!----------------------------------------------------------------
+		;! @destr may destroy almost all (except rsp, rbp) SYSCALL, DONT BELIEVE ANYONE!!!
+		;!--------------------------------------------------------------------------------
 		Print_Octal:
 			mov ebx, 111000000000000000b		; ebx = start_mask
 			mov ecx, 15										; ecx = start_shift
@@ -217,13 +329,13 @@ _start:
 
 
 
-		;!----------------------------------------------------------------
+		;!-----------------------------------------------------------------------------
 		;! Print in Decimal mode, preparing and calling func.
 		;!
 		;! @input r13d - Number
 		;
-		;! @destr eax, ebx, ecx, dx, r8d, r11d, r12d, r15d
-		;!----------------------------------------------------------------
+		;! @destr may destroy almost all (except rsp, rbp) SYSCALL, DONT BELIEVE ANYONE!!!
+		;!--------------------------------------------------------------------------------
 		Print_Dec:
 			mov eax, r13d
 			mov r12d, 0
@@ -255,13 +367,13 @@ _start:
 			call print_to_console
 		ret
 
-		;!---------------------------------------------------------------------
+		;!-----------------------------------------------------------------------------
 		;! Print output string to console using system call
 		;!
 		;! @input edx - strlen, r8d - output string pointer
-		;! @destr eax, ebx, ecx, edx, r13
-		;!				may destroy almost all (except rsp) DONT BELIEVE ANYONE!!!
-		;!---------------------------------------------------------------------
+		;! @destr may destroy almost all (except rsp, rbp) SYSCALL, DONT BELIEVE ANYONE!!!
+		;!
+		;!------------------------------------------------------------------------------
 		print_to_console:									; syscall
 			mov eax, 4
 			mov ebx, 1
@@ -270,13 +382,13 @@ _start:
 		ret
 
 
-		;!----------------------------------------------------------------
+		;!---------------------------------------------------------------------------------
 		;! Print '/n'
 		;!
 		;! @input
-		;! @destr eax, ebx, ecx, edx
-		;!				may destroy almost all (except rsp) DONT BELIEVE ANYONE!!!
-		;!----------------------------------------------------------------
+		;! @destr may destroy almost all (except rsp, rbp) SYSCALL, DONT BELIEVE ANYONE!!!
+		;!
+		;!--------------------------------------------------------------------------------------
 		Print_space:
 			mov eax, 4
 			mov ebx, 1
@@ -291,8 +403,12 @@ _start:
 		stack resb 1024
 
 	SECTION .data
-		input db 'hello! %x hello!'
-		input_len equ $ - input
+		input1 db 'hello! %x hello!'
+		input1_len equ $ - input1
+		input2 db ',and %c %s %x %u%%!'
+		input2_len equ $ - input2
+		s1 db 'love'
+		s1_len equ $ - s1
 		dict dw '0123456789ABCDEFD'
 		space db 0xD, 0xA
 		space_size equ 2
@@ -301,3 +417,5 @@ _start:
 		output_oct times 5 db '0'
 		output_dec times 6 db '0'
 		output_sym db '0'
+		handler_warning db 'ERROR! QUALIFIER NOT DEFINED!!!'
+		handler_warning_len equ $ - handler_warning
