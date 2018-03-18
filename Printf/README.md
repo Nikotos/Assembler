@@ -1,5 +1,5 @@
 # How to?
-Termina; commands
-nasm -f elf64 printf.asm -o printf.o
-gcc main.c printf.o -o say
-./say
+#Terminal commands
+#nasm -f elf64 printf.asm -o printf.o
+#gcc main.c printf.o -o say
+#./say
