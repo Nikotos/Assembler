@@ -1,51 +1,26 @@
 
 SECTION .TEXT
-	GLOBAL _start
+	GLOBAL oak_printf
 
 SECTION .const
 NUMBER equ 0xABC
 
-_start:
+oak_printf:
 	jmp main
 
 	;!// int Main() {..............
 	main:
 
-		mov rax, 3802
-		push rax
-			mov r10d, input1
-			mov r11d, input1_len
-				call Printf
-		pop rax
 
+		push r9							 ; pushing arguments to stack
+		push r8
+		push rcx
+		push rdx
+		push rsi
 
-		mov rax, 100
-		push rax
-
-		mov rax, 3802
-		push rax
-
-		mov rax, s1				;// way to transfer string
-		push rax
-		mov rax, s1_len				;// strlen
-		push rax
-
-		mov rax, 'I'
-		push rax
-
-
-		mov r10d, input2
-		mov r11d, input2_len
+		mov r10, rdi					; rdi - format string
 		call Printf
 
-		pop rax
-
-		pop rax
-		pop rax
-
-		pop rax
-
-		pop rax
 
 
 
@@ -77,7 +52,7 @@ _start:
 			parsing:
 				xor rax, rax
 
-				mov al, [r10d + r9d]
+				mov al, [r10 + r9]
 
 				cmp al, '%' 			; (if getchar() == '%') {call handler}
 				jne pars_pass1
@@ -98,18 +73,20 @@ _start:
 				je pars_pass2
 					push r10
 					push r11
+					push rax
 
 					mov [output_sym], al
 					mov r8d, output_sym
 					mov edx, 1
 					call print_to_buffer
 
+					pop rax
 					pop r11
 					pop r10
 					pars_pass2:
 
 				add r9d, 1
-				cmp r9d, r11d
+				cmp al, 0							; do while (getchar() != "\0")
 				jne parsing
 
 
@@ -131,63 +108,63 @@ _start:
 		;!----------------------------------------------------------------------------------
 		pars_handler:
 		xor r13, r13
-		mov al, [r10d + r9d]				; al = qualifier, switch(al)
+		mov al, [r10 + r9]					; al = qualifier, switch(al)
 		mov cl, 0
 
-			cmp al, 'u'						;case 'u': // Unsigned integer
+			cmp al, 'u'								;case 'u': // Unsigned integer
 			jne hand_pass1
-				push ax						;// push to save
+				push ax									;// push to save
 
-				mov r13, [rbp]					; r13w = arg
+				mov r13, [rbp]					; r13 = arg
 
 				call Print_Dec
 				add rbp, 8
 				pop ax
-				mov cl, '1'					; // to print % without qualifiers
+				mov cl, '1'							; // to catch % without qualifiers
 			hand_pass1:
 
-			cmp al, 'b'						;case 'b': // Binary
+			cmp al, 'b'								;case 'b': // Binary
 			jne hand_pass2
 				push ax
 
-				mov r13, [rbp]					; r13w = arg
+				mov r13, [rbp]					; r13 = arg
 				call Print_Binary
 
 				add rbp, 8
 				pop ax
-				mov cl, '1'					; // to print % without qualifiers
+				mov cl, '1'							; // to catch % without qualifiers
 			hand_pass2:
 
-			cmp al, 'o'						;case 'o': // Octal
+			cmp al, 'o'								;case 'o': // Octal
 			jne hand_pass3
 				push ax
 
-				mov r13, [rbp]					; r13w = arg
+				mov r13, [rbp]					; r13 = arg
 				call Print_Octal
 
 				add rbp, 8
 				pop ax
-				mov cl, '1'					; // to print % without qualifiers
+				mov cl, '1'							; // to catch % without qualifiers
 			hand_pass3:
 
-			cmp al, 'x'						;case 'x': // Hex
+			cmp al, 'x'								;case 'x': // Hex
 			jne hand_pass4
 				push ax
 
-				mov r13, [rbp]					; r13w = arg
+				mov r13, [rbp]					; r13 = arg
 				call Print_Hex
 
 				add rbp, 8
 
 				pop ax
-				mov cl, '1'					; // to print % without qualifiers
+				mov cl, '1'						; // to catch print % without qualifiers
 			hand_pass4:
 
-			cmp al, 'c'						;case 'c': // Char
+			cmp al, 'c'								;case 'c': // Char
 			jne hand_pass5
 				push ax
 
-				mov r13, [rbp]					; r13w = arg
+				mov r13, [rbp]					; r13 = arg
 				mov ax, r13w
 				mov [output_sym], al
 
@@ -197,34 +174,43 @@ _start:
 
 				add rbp, 8
 				pop ax
-				mov cl, '1'					; // to print % without qualifiers
+				mov cl, '1'							; // to catch % without qualifiers
 			hand_pass5:
 
-			cmp al, 's'						;case 's': // String
+			cmp al, 's'								;case 's': // String
 			jne hand_pass6
 				push ax
-				xor rdx, rdx					;// to edx been nulled
-				mov rdx, [rbp]					; dx = strlen!! highest two bytes in stack!
-				mov r8, [rbp + 8]
-				call print_to_buffer
+				push cx
+				mov r10, [rbp]					; highest two bytes in stack!
+				mov rcx, 0
 
-				add rbp, 16
+				str_cycle:
+					mov al, [r10 + rcx]
+
+					mov [buffer + r15d], al
+					add r15d, 1
+
+					add rcx, 1
+					cmp al, 0									; do while (getchar() != "\0")
+					jne str_cycle
+
+				add rbp, 8
+				pop cx
 				pop ax
-				mov cl, '1'					; // to print % without qualifiers
+				mov cl, '1'								; // // to catch % without qualifiers
 			hand_pass6:
 
-			cmp al, '%'						;case 's': // String
+			cmp al, '%'									;case 's': // String
 			jne hand_pass7
 				push ax
-				xor rdx, rdx					;// to edx been nulled
-				mov edx, 1					; dx = strlen!! highest two bytes in stack!
+
 				mov byte [output_sym], '%'
 				mov r8, output_sym
 				mov edx, 1
 				call print_to_buffer
 
 				pop ax
-				mov cl, '1'					; // to print % without qualifiers
+				mov cl, '1'								; // to catch % without qualifiers
 			hand_pass7:
 
 
@@ -435,7 +421,7 @@ _start:
 		dict dw '0123456789ABCDEFD'
 		space db 0xD, 0xA
 		space_size equ 2
-		output_bin	times 16 db '0'				;// output string for binary numbers
+		output_bin	times 16 db '0'			;// output string for binary numbers
 		output_hex times 4 db '0'				;// for hex
 		output_oct times 5 db '0'				;// etc.
 		output_dec times 6 db '0'
