@@ -409,12 +409,6 @@ oak_printf:
 		buffer resb 1024
 
 	SECTION .data
-		input1 db 'hello! %x hello!'
-		input1_len equ $ - input1
-		input2 db ',and %c %s %x %u%%!'
-		input2_len equ $ - input2
-		s1 db 'love'
-		s1_len equ $ - s1
 		dict dw '0123456789ABCDEFD'
 		space db 0xD, 0xA
 		space_size equ 2
