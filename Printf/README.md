@@ -1,4 +1,4 @@
-How to? Terminal commands:
+Terminal commands:
 ---
 1) nasm -f elf64 printf.asm -o printf.o
 
