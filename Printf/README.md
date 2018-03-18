@@ -1,8 +1,8 @@
 #How to? Terminal commands:
 ---
-nasm -f elf64 printf.asm -o printf.o
+1) nasm -f elf64 printf.asm -o printf.o
 ---
-gcc main.c printf.o -o say
+2) gcc main.c printf.o -o say
 ---
-s./say
+3) ./say
 ---
