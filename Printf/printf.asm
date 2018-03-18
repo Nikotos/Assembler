@@ -2,9 +2,6 @@
 SECTION .TEXT
 	GLOBAL oak_printf
 
-SECTION .const
-NUMBER equ 0xABC
-
 oak_printf:
 	jmp main
 
