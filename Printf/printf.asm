@@ -2,12 +2,17 @@
 SECTION .TEXT
 	GLOBAL oak_printf
 
+SECTION .const
+NUMBER equ 0xABC
+
 oak_printf:
 	jmp main
 
 	;!// int Main() {..............
 	main:
 
+		pop rax
+		mov [ret_adr], rax
 
 		push r9							 ; pushing arguments to stack
 		push r8
@@ -20,11 +25,11 @@ oak_printf:
 
 
 
+		;return 0
+		mov rax, [ret_adr]
+		push rax
+		ret
 
-		; return 0
-		mov eax, 1
-		mov ebx, 0
-		int 80h
 	;!// } END OF MAIN
 
 	jmp bypassing_jump		;// bypssing jump to pass functions
@@ -269,6 +274,7 @@ oak_printf:
 		;! @destr rax, rbx, rdx, rcx, r8d, r13d, r14d
 		;!--------------------------------------------------------------------------------
 		Print_Octal:
+
 			mov ebx, 111000000000000000b		; ebx = start_mask
 			mov ecx, 15				; ecx = start_shift
 			mov edx, -1				; edx = srtlen // edx becaue of memory addressing
@@ -409,6 +415,7 @@ oak_printf:
 		buffer resb 1024
 
 	SECTION .data
+		ret_adr dq 0
 		dict dw '0123456789ABCDEFD'
 		space db 0xD, 0xA
 		space_size equ 2

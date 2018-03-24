@@ -6,8 +6,8 @@ void oak_printf(char*, ...);
 int main() {
 
     char* a = "edaaaaaaa";
-    oak_printf("hello %s", a);
-
+    oak_printf("have a good day %x %u", 3801, 123);
+    oak_printf("we did it!");
 
 
     return 0;
