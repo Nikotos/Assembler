@@ -1,0 +1,5 @@
+Error in FILE [FDict.cpp]
+in FUNCTION [void oak::Words_dealer::Read_file(const char*)]
+in LINE [124]
+Error code is [42]
+Message is [Can't open File!] 

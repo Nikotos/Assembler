@@ -1,0 +1,30 @@
+\documentclass[a4paper,12pt]{article}
+\usepackage{float}
+\usepackage{pgfplots}
+% Preamble: \pgfplotsset{width=1cm,compat=newest}
+\begin{document}
+\begin{tikzpicture}
+\begin{axis}[height=15cm,width=15cm,grid=major]
+\addlegendentry{gpaphic}
+\addplot[color = blue, mark = * ] coordinates {
+(1,4)
+(2,42)
+(3,312)
+(4,1134)
+(5,1927)
+(6,2340)
+(7,2189)
+(8,1904)
+(9,1359)
+(10,865)
+(11,456)
+(12,206)
+(13,76)
+(14,21)
+(15,11)
+(16,3)
+};
+
+\end{axis}
+\end{tikzpicture}
+\end{document}

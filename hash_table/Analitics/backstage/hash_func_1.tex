@@ -1,0 +1,15 @@
+\documentclass[a4paper,12pt]{article}
+\usepackage{float}
+\usepackage{pgfplots}
+% Preamble: \pgfplotsset{width=1cm,compat=newest}
+\begin{document}
+\begin{tikzpicture}
+\begin{axis}[height=15cm,width=15cm,grid=major]
+\addlegendentry{gpaphic}
+\addplot[color = blue, mark = * ] coordinates {
+(1,12849)
+};
+
+\end{axis}
+\end{tikzpicture}
+\end{document}
