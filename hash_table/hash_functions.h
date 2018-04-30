@@ -66,6 +66,7 @@ size_t hash_func_6(const char* data)
 
 
 
+
 /*==============================================================================
  *
  *      Optimized realisation, but with function call
@@ -76,22 +77,24 @@ size_t hash_func_6_forced(const char* data)
 {
    uint32_t hash = 0;
 
-    __asm__ __volatile__
-    (
-                ".intel_syntax noprefix\n\t"
-                "xor eax, eax\n\t"
-                "cycle:\n\t"
-                "shl eax, 5\n\t"
-                "add al, byte ptr[rsi]\n\t"
-                "inc rsi\n\t"
-                "cmp byte ptr [rsi], 0\n\t"
-                "jne cycle\n\t"
-                "mov %0, eax\n\t"
-                ".att_syntax prefix\n\t"
-                :   "=r" (hash)
-                :   "S" (data)
-                :   "%eax"
-                );
+    __asm__ __volatile__                    \
+    (                                       \
+            ".intel_syntax noprefix\n\t"    \
+            "xor eax, eax\n\t"              \
+            "xor ebx, ebx\n\t"              \
+            "shl eax, 0x5\n\t"              \
+            "add eax, ebx\n\t"              \
+            "mov ebx, eax\n\t"              \
+            "add al, byte ptr[rsi]\n\t"     \
+            "inc rsi\n\t"                   \
+            "cmp byte ptr [rsi], 0\n\t"     \
+            "jne $ - 0xF\n\t"               \
+            "mov %0, eax\n\t"               \
+            ".att_syntax prefix\n\t"        \
+            :   "=r" (hash)                 \
+            :   "S" (DATA)                  \
+            :   "%eax"                      \
+            );                              \
 
     return hash;
 }
@@ -117,11 +120,14 @@ size_t hash_func_6_forced(const char* data)
     (                                       \
             ".intel_syntax noprefix\n\t"    \
             "xor eax, eax\n\t"              \
+            "xor ebx, ebx\n\t"              \
             "shl eax, 0x5\n\t"              \
+            "add eax, ebx\n\t"              \
+            "mov ebx, eax\n\t"              \
             "add al, byte ptr[rsi]\n\t"     \
             "inc rsi\n\t"                   \
             "cmp byte ptr [rsi], 0\n\t"     \
-            "jne $ - 0xB\n\t"               \
+            "jne $ - 0xF\n\t"               \
             "mov %0, eax\n\t"               \
             ".att_syntax prefix\n\t"        \
             :   "=r" (hash)                 \

@@ -24,6 +24,7 @@
  *
  *
  /==============================================================================*/
+//TODO add comments (labels)
 
 #define THE_FASTEST_WORDCMP(WORD1, WORD2)       \
     ({  uint8_t res = 1;                        \
@@ -144,6 +145,9 @@ oak::Words_dealer::~Words_dealer()
     delete [] heap_;
     delete [] text_;
 
+
+    heap_ = nullptr;
+    text_ = nullptr;
     words_amount_ = 0;
 }
 
